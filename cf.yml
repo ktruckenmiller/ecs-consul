@@ -1,36 +1,36 @@
 AWSTemplateFormatVersion: 2010-09-09
 Resources:
-  TaskClient:
-    Type: "AWS::ECS::TaskDefinition"
-    Properties:
-      RequiresCompatibilities:
-        - "EC2"
-        # - "FARGATE"
-      PlacementConstraints:
-        - Type: distinctInstance
-        - Type: memberOf
-          Expression: not(task:group == task:consul-server)
-      Cpu: 40
-      Memory: 256
-      NetworkMode: host
-      ContainerDefinitions:
-        - Name: consul-client
-          DockerLabels:
-            Name: consul-client
-          Image: consul
-          Environment:
-            - Name: CONSUL_BIND_INTERFACE
-              Value: eth0
-            - Name: enable_debug
-              Value: true
-          LogConfiguration:
-            LogDriver: awslogs
-            Options:
-              awslogs-group: !Ref ConsulLogGroup
-              awslogs-region: !Sub ${AWS::Region}
-              awslogs-stream-prefix: consul-client
-          EntryPoint: ["/usr/local/bin/docker-entrypoint.sh"]
-          Command: ["agent", "-client=0.0.0.0", "-data-dir=/consul/data", "-retry-join", "-ui", "provider=aws tag_key=consul tag_value=member"]
+  # TaskClient:
+  #   Type: "AWS::ECS::TaskDefinition"
+  #   Properties:
+  #     RequiresCompatibilities:
+  #       - "EC2"
+  #       # - "FARGATE"
+  #     PlacementConstraints:
+  #       - Type: distinctInstance
+  #       - Type: memberOf
+  #         Expression: not(task:group == task:consul-server)
+  #     NetworkMode: host
+  #     ContainerDefinitions:
+  #       - Name: consul-client
+  #         DockerLabels:
+  #           Name: consul-client
+  #         Image: consul
+  #         Cpu: 40
+  #         Memory: 256
+  #         Environment:
+  #           - Name: CONSUL_BIND_INTERFACE
+  #             Value: eth0
+  #           - Name: enable_debug
+  #             Value: true
+  #         LogConfiguration:
+  #           LogDriver: awslogs
+  #           Options:
+  #             awslogs-group: !Ref ConsulLogGroup
+  #             awslogs-region: !Sub ${AWS::Region}
+  #             awslogs-stream-prefix: consul-client
+  #         EntryPoint: ["/usr/local/bin/docker-entrypoint.sh"]
+  #         Command: ["agent", "-client=0.0.0.0", "-data-dir=/consul/data", "-retry-join", "-ui", "provider=aws tag_key=consul tag_value=member"]
 
   Service:
     Type: AWS::ECS::Service
@@ -48,14 +48,15 @@ Resources:
       RequiresCompatibilities:
         - "EC2"
         # - "FARGATE"
-      Cpu: 40
-      Memory: 128
+
       NetworkMode: host
       ContainerDefinitions:
         - Name: consul-server
           DockerLabels:
             Name: consul-server
           Image: consul
+          Cpu: 40
+          Memory: 128
           Environment:
             - Name: CONSUL_BIND_INTERFACE
               Value: eth0
