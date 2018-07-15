@@ -1,6 +1,7 @@
 AWSTemplateFormatVersion: 2010-09-09
 Resources:
   TaskClient:
+    DependsOn: LogGroup
     Type: "AWS::ECS::TaskDefinition"
     Properties:
       RequiresCompatibilities:
@@ -44,6 +45,7 @@ Resources:
       TaskDefinition: !Ref TaskServer
       ServiceName: consul-server
   TaskServer:
+    DependsOn: LogGroup
     Type: "AWS::ECS::TaskDefinition"
     Properties:
       RequiresCompatibilities:
