@@ -42,6 +42,8 @@ Resources:
       DesiredCount: 3
       TaskDefinition: !Ref TaskServer
       ServiceName: consul-server
+      PlacementConstraints:
+        - Type: distinctInstance
   TaskServer:
     Type: "AWS::ECS::TaskDefinition"
     Properties:
@@ -50,8 +52,7 @@ Resources:
         # - "FARGATE"
 
       NetworkMode: host
-      PlacementConstraints:
-        - Type: distinctInstance
+
       ContainerDefinitions:
         - Name: consul-server
           DockerLabels:
