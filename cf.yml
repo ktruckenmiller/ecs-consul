@@ -12,8 +12,7 @@ Resources:
           Expression: not(task:group == task:consul-server)
       Cpu: 40
       Memory: 256
-      NetworkMode:
-        - host
+      NetworkMode: host
       ContainerDefinitions:
         - Name: consul-client
           DockerLabels:
@@ -51,8 +50,7 @@ Resources:
         - "FARGATE"
       Cpu: 40
       Memory: 128
-      NetworkMode:
-        - host
+      NetworkMode: host
       ContainerDefinitions:
         - Name: consul-server
           DockerLabels:
