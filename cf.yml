@@ -27,7 +27,7 @@ Resources:
           LogConfiguration:
             LogDriver: awslogs
             Options:
-              awslogs-group: !Ref ${LogGroup}
+              awslogs-group: !Ref ConsulLogGroup
               awslogs-stream: !Sub ${AWS::Region}
               awslogs-stream-prefix: consul-client
           Entrypoint: ["/usr/local/bin/docker-entrypoint.sh"]
