@@ -38,7 +38,7 @@ Resources:
               awslogs-region: !Sub ${AWS::Region}
               awslogs-stream-prefix: consul-client
           EntryPoint: ["/usr/local/bin/docker-entrypoint.sh"]
-          Command: ["agent", "-client=0.0.0.0", "-data-dir=/consul/data", "-retry-join", "-ui", "provider=aws tag_key=consul tag_value=member"]
+          Command: ["agent", "-client=0.0.0.0", "-data-dir=/consul/data", "-ui", "-retry-join", "provider=aws tag_key=consul tag_value=member"]
 
   ServiceServer:
     Type: AWS::ECS::Service
