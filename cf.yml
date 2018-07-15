@@ -1,0 +1,77 @@
+AWSTemplateFormatVersion: 2010-09-09
+Resources:
+  TaskClient:
+    Type: "AWS::ECS::TaskDefinition"
+    Properties:
+      RequiresCompatibilities:
+        - "EC2"
+        - "FARGATE"
+      PlacementConstraints:
+        - Type: DistinctInstance
+        - Type: MemberOf
+          Expression: not(task:group == task:consul-server)
+      Cpu: 40
+      Memory: 256
+      NetworkMode:
+        - host
+      ContainerDefinitions:
+        - Name: consul-client
+          DockerLabels:
+            Name: consul-client
+          Image: consul
+          Environment:
+            - Name: CONSUL_BIND_INTERFACE
+              Value: eth0
+            - Name: enable_debug
+              Value: true
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref ${LogGroup}
+              awslogs-stream: !Sub ${AWS::Region}
+              awslogs-stream-prefix: consul-client
+          Entrypoint: ["/usr/local/bin/docker-entrypoint.sh"]
+          Command: ["agent", "-client=0.0.0.0", "-data-dir=/consul/data", "-retry-join", "-ui", "provider=aws tag_key=consul tag_value=member"]
+
+  Service:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: kloudcover
+      DeploymentConfiguration:
+        MaximumPercent: 100
+        MinimumHealthyPercent: 0
+      DesiredCount: 1
+      TaskDefinition: !Ref TaskServer
+      ServiceName: consul-server
+  TaskServer:
+    Type: "AWS::ECS::TaskDefinition"
+    Properties:
+      RequiresCompatibilities:
+        - "EC2"
+        - "FARGATE"
+      Cpu: 40
+      Memory: 128
+      NetworkMode:
+        - host
+      ContainerDefinitions:
+        - Name: consul-server
+          DockerLabels:
+            Name: consul-server
+          Image: consul
+          Environment:
+            - Name: CONSUL_BIND_INTERFACE
+              Value: eth0
+            - Name: enable_debug
+              Value: true
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref ${LogGroup}
+              awslogs-stream: !Sub ${AWS::Region}
+              awslogs-stream-prefix: consulServer
+          Entrypoint: ["/usr/local/bin/docker-entrypoint.sh"]
+          Command: ["agent", "-client=0.0.0.0", "-server", "-data-dir=/consul/data", "-bootstrap", "-ui"]
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 7

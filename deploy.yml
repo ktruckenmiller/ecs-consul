@@ -1,0 +1,23 @@
+---
+- hosts: localhost
+  gather_facts: False
+  vars:
+    region: us-west-2
+    # EFS stuff
+    cluster: kloudcover
+    vpc_id: vpc-849531e0
+    security_group: sg-36ab3149
+    kms_key: 4bacdbef-cc46-41fd-b333-2623977cbf83
+    efs_subnet:
+      - subnet-bc3193d8
+      - subnet-ed43849b
+
+  tasks:
+    - name: cloudformation deploy
+      cloudformation:
+        stack_name: consul
+        template_body: cf.yml
+        region: "{{region}}"
+      register: consul
+
+    - debug: var=consul.stack_outputs
