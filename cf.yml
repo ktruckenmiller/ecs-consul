@@ -41,7 +41,6 @@ Resources:
         MinimumHealthyPercent: 0
       DesiredCount: 3
       TaskDefinition: !Ref TaskServer
-      ServiceName: consul-server
       PlacementConstraints:
         - Type: distinctInstance
   TaskServer:
