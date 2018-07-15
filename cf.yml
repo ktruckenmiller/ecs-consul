@@ -50,6 +50,8 @@ Resources:
         # - "FARGATE"
 
       NetworkMode: host
+      PlacementConstraints:
+        - Type: distinctInstance
       ContainerDefinitions:
         - Name: consul-server
           DockerLabels:
