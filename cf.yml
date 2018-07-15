@@ -5,7 +5,7 @@ Resources:
     Properties:
       RequiresCompatibilities:
         - "EC2"
-        - "FARGATE"
+        # - "FARGATE"
       PlacementConstraints:
         - Type: distinctInstance
         - Type: memberOf
@@ -47,7 +47,7 @@ Resources:
     Properties:
       RequiresCompatibilities:
         - "EC2"
-        - "FARGATE"
+        # - "FARGATE"
       Cpu: 40
       Memory: 128
       NetworkMode: host
