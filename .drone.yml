@@ -1,0 +1,9 @@
+deploy_postgres:
+  image: ktruckenmiller/ansible:dind
+  environment:
+    - AWS_DEFAULT_REGION=us-west-2
+  commands:
+    - ansible-playbook -i ansible_connection=localhost deploy.yml -e region=us-west-2 -vvv
+  when:
+    event: [push]
+    branch: [master]
