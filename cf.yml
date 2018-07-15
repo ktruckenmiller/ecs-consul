@@ -30,7 +30,7 @@ Resources:
               awslogs-group: !Ref ConsulLogGroup
               awslogs-stream: !Sub ${AWS::Region}
               awslogs-stream-prefix: consul-client
-          Entrypoint: ["/usr/local/bin/docker-entrypoint.sh"]
+          EntryPoint: ["/usr/local/bin/docker-entrypoint.sh"]
           Command: ["agent", "-client=0.0.0.0", "-data-dir=/consul/data", "-retry-join", "-ui", "provider=aws tag_key=consul tag_value=member"]
 
   Service:
@@ -69,7 +69,7 @@ Resources:
               awslogs-group: !Ref ConsulLogGroup
               awslogs-stream: !Sub ${AWS::Region}
               awslogs-stream-prefix: consulServer
-          Entrypoint: ["/usr/local/bin/docker-entrypoint.sh"]
+          EntryPoint: ["/usr/local/bin/docker-entrypoint.sh"]
           Command: ["agent", "-client=0.0.0.0", "-server", "-data-dir=/consul/data", "-bootstrap", "-ui"]
   ConsulLogGroup:
     Type: AWS::Logs::LogGroup
