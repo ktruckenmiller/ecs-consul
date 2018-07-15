@@ -1,7 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 Resources:
   TaskClient:
-    DependsOn: LogGroup
     Type: "AWS::ECS::TaskDefinition"
     Properties:
       RequiresCompatibilities:
@@ -45,7 +44,6 @@ Resources:
       TaskDefinition: !Ref TaskServer
       ServiceName: consul-server
   TaskServer:
-    DependsOn: LogGroup
     Type: "AWS::ECS::TaskDefinition"
     Properties:
       RequiresCompatibilities:
@@ -68,12 +66,12 @@ Resources:
           LogConfiguration:
             LogDriver: awslogs
             Options:
-              awslogs-group: !Ref ${LogGroup}
+              awslogs-group: !Ref ${ConsulLogGroup}
               awslogs-stream: !Sub ${AWS::Region}
               awslogs-stream-prefix: consulServer
           Entrypoint: ["/usr/local/bin/docker-entrypoint.sh"]
           Command: ["agent", "-client=0.0.0.0", "-server", "-data-dir=/consul/data", "-bootstrap", "-ui"]
-  LogGroup:
+  ConsulLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       RetentionInDays: 7
