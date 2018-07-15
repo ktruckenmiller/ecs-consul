@@ -44,6 +44,7 @@ Resources:
     Type: AWS::ECS::Service
     Properties:
       Cluster: kloudcover
+      ServiceName: consul-service-1
       DeploymentConfiguration:
         MaximumPercent: 100
         MinimumHealthyPercent: 0
