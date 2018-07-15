@@ -7,8 +7,8 @@ Resources:
         - "EC2"
         - "FARGATE"
       PlacementConstraints:
-        - Type: DistinctInstance
-        - Type: MemberOf
+        - Type: distinctInstance
+        - Type: memberOf
           Expression: not(task:group == task:consul-server)
       Cpu: 40
       Memory: 256
@@ -27,7 +27,7 @@ Resources:
             LogDriver: awslogs
             Options:
               awslogs-group: !Ref ConsulLogGroup
-              awslogs-stream: !Sub ${AWS::Region}
+              awslogs-region: !Sub ${AWS::Region}
               awslogs-stream-prefix: consul-client
           EntryPoint: ["/usr/local/bin/docker-entrypoint.sh"]
           Command: ["agent", "-client=0.0.0.0", "-data-dir=/consul/data", "-retry-join", "-ui", "provider=aws tag_key=consul tag_value=member"]
@@ -65,7 +65,7 @@ Resources:
             LogDriver: awslogs
             Options:
               awslogs-group: !Ref ConsulLogGroup
-              awslogs-stream: !Sub ${AWS::Region}
+              awslogs-region: !Sub ${AWS::Region}
               awslogs-stream-prefix: consulServer
           EntryPoint: ["/usr/local/bin/docker-entrypoint.sh"]
           Command: ["agent", "-client=0.0.0.0", "-server", "-data-dir=/consul/data", "-bootstrap", "-ui"]
