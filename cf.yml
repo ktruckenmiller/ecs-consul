@@ -39,7 +39,7 @@ Resources:
       DeploymentConfiguration:
         MaximumPercent: 100
         MinimumHealthyPercent: 0
-      DesiredCount: 1
+      DesiredCount: 3
       TaskDefinition: !Ref TaskServer
       ServiceName: consul-server
   TaskServer:
