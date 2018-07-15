@@ -16,7 +16,7 @@
     - name: cloudformation deploy
       cloudformation:
         stack_name: consul
-        template_body: cf.yml
+        template: cf.yml
         region: "{{region}}"
       register: consul
 
