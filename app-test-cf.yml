@@ -31,6 +31,8 @@ Resources:
               Value: eth0
             - Name: enable_debug
               Value: true
+            - Name: AWS_DEFAULT_REGION
+              value: !Sub ${AWS::Region}
           LogConfiguration:
             LogDriver: awslogs
             Options:
