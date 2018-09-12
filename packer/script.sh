@@ -1,6 +1,12 @@
 stop ecs
 yum update -y
-yum install wget unzip zip aws-cli jq nfs-utils aws-cfn-bootstrap -y
+yum install wget \
+            unzip \
+            git \
+            zip \
+            aws-cli \
+            gcc gcc-c++ autoconf automake fuse-devel curl-devel libxml2-devel openssl-devel \
+            jq nfs-utils aws-cfn-bootstrap -y
 echo 'DOCKER_STORAGE_OPTIONS="--storage-driver overlay2"' > /etc/sysconfig/docker-storage
 service docker restart
 
@@ -12,6 +18,7 @@ cd s3fs-fuse/
 ./configure --prefix=/usr
 make
 make install
+# mv src/s3fs /usr/bin/s3fs
 cd ..
 
 
