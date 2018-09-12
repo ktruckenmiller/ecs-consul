@@ -144,51 +144,50 @@ Resources:
             Fn::Base64:
               Fn::Sub: |
                 #!/bin/bash -xe
-                stop ecs
                 s3fs kloudcover:/consul /mnt/consul -o iam_role="${InstanceRole}"
 
                 mkdir -p /efs
                 mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 fs-df827476.efs.${AWS::Region}.amazonaws.com:/ /efs
-
-
-        - BlockDeviceMappings:
-
-          - DeviceName: "/dev/xvdcz"
-            Ebs:
-              DeleteOnTermination: 'true'
-              VolumeSize: !Ref VolumeSize
-              VolumeType: gp2
-          WeightedCapacity: 1
-          IamInstanceProfile:
-            Arn: !GetAtt InstanceProfile.Arn
-          ImageId: !Ref ImageId
-          InstanceType: t2.small
-          KeyName: boston
-          Monitoring:
-            Enabled: 'true'
-          SecurityGroups:
-          - GroupId:
-              Ref: ConsulBadgeSG
-          - GroupId:
-              Ref: ConsulPort22SG
-          SpotPrice: '0.03'
-          SubnetId:
-            Fn::Join:
-            - ","
-            - - subnet-9b2938c2
-              - subnet-bc3193d8
-              - subnet-ed43849b
-          # TagSpecifications:
-          # - ResourceType: instance
-          #   Tags:
-          #   - Key: cluster
-          #     Value: kloudcover
-          UserData:
-            Fn::Base64:
-              Fn::Sub: |
-                #!/bin/bash -xe
                 stop ecs
-                s3fs kloudcover:/consul /mnt/consul -o iam_role="${InstanceRole}"
 
-                mkdir -p /efs
-                mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 fs-df827476.efs.${AWS::Region}.amazonaws.com:/ /efs
+        # - BlockDeviceMappings:
+        #
+        #   - DeviceName: "/dev/xvdcz"
+        #     Ebs:
+        #       DeleteOnTermination: 'true'
+        #       VolumeSize: !Ref VolumeSize
+        #       VolumeType: gp2
+        #   WeightedCapacity: 1
+        #   IamInstanceProfile:
+        #     Arn: !GetAtt InstanceProfile.Arn
+        #   ImageId: !Ref ImageId
+        #   InstanceType: t2.small
+        #   KeyName: boston
+        #   Monitoring:
+        #     Enabled: 'true'
+        #   SecurityGroups:
+        #   - GroupId:
+        #       Ref: ConsulBadgeSG
+        #   - GroupId:
+        #       Ref: ConsulPort22SG
+        #   SpotPrice: '0.03'
+        #   SubnetId:
+        #     Fn::Join:
+        #     - ","
+        #     - - subnet-9b2938c2
+        #       - subnet-bc3193d8
+        #       - subnet-ed43849b
+        #   # TagSpecifications:
+        #   # - ResourceType: instance
+        #   #   Tags:
+        #   #   - Key: cluster
+        #   #     Value: kloudcover
+        #   UserData:
+        #     Fn::Base64:
+        #       Fn::Sub: |
+        #         #!/bin/bash -xe
+        #         s3fs kloudcover:/consul /mnt/consul -o iam_role="${InstanceRole}"
+        #
+        #         mkdir -p /efs
+        #         mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 fs-df827476.efs.${AWS::Region}.amazonaws.com:/ /efs
+        #         stop ecs
