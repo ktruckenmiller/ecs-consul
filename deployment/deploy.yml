@@ -21,8 +21,6 @@
         ami_id: "{{ami.stdout}}"
       when: '"ami" in ami.stdout'
 
-    - debug: msg="{{ ami_id | default('ami-0067263472a0df1bd')}}"
-
     - name: cloudformation deploy
       cloudformation:
         stack_name: consul-server
@@ -30,7 +28,7 @@
         region: "{{region}}"
         template_parameters:
           VpcId: "{{vpc_id}}"
-          ImageId: "{{image_id}}"
+          ImageId: "{{ ami_id | default('ami-0067263472a0df1bd')}}"
       register: consul
 
     - debug: var=consul.stack_outputs
