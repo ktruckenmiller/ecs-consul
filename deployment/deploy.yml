@@ -19,7 +19,7 @@
 
     - set_fact:
         ami_id: "{{ami.stdout}}"
-      when: 'ami' in ami.stdout
+      when: '"ami" in ami.stdout'
 
     # - name: cloudformation deploy
     #   cloudformation:
