@@ -21,6 +21,10 @@
         ami_id: "{{ami.stdout}}"
       when: '"ami" in ami.stdout'
 
+    - set_fact:
+        ami_id: ""
+      when: '"ami" not in ami.stdout'
+
     # - name: cloudformation deploy
     #   cloudformation:
     #     stack_name: consul-server
