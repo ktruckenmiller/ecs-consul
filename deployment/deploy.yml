@@ -13,6 +13,8 @@
       - subnet-ed43849b
 
   tasks:
+    - shell: ls
+    - shell: ls packer
     - shell: cat packer/ami.txt
       register: ami
       ignore_errors: true
