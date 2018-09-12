@@ -1,0 +1,191 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  VolumeSize:
+    Default: 8
+    Type: String
+  ImageId:
+    Type: String
+  VpcId:
+    Type: String
+Resources:
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service: ec2.amazonaws.com
+      Policies:
+      - PolicyName: consul-instance
+        PolicyDocument:
+          Statement:
+          - Action:
+            - s3:*
+            Effect: Allow
+            Resource:
+              - !Sub arn:aws:s3:::kloudcover/consul/*
+          - Action:
+            - s3:List*
+            Effect: Allow
+            Resource:
+              - !Sub arn:aws:s3:::kloudcover
+          - Action:
+            - ssm:Get*
+            - ssm:Put*
+            - ssm:Delete*
+            Effect: Allow
+            Resource:
+            - Fn::Sub: arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/consul/*
+
+  ConsulBadgeSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: SG for ecs instances to connect to the cluster
+      SecurityGroupIngress:
+      - FromPort: 0
+        IpProtocol: tcp
+        SourceSecurityGroupId: sg-07c2597a
+        ToPort: 64500
+
+
+  ConsulPort22SG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: SSH for me
+      SecurityGroupIngress:
+      - CidrIp: 0.0.0.0/0
+        FromPort: 22
+        IpProtocol: tcp
+        ToPort: 22
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref InstanceRole
+
+  SpotFleetRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service: spotfleet.amazonaws.com
+      Policies:
+      - PolicyDocument:
+          Statement:
+          - Action:
+            - ec2:Describe*
+            - ec2:CancelSpotFleetRequests
+            - ec2:CancelSpotInstanceRequests
+            - ec2:ModifySpotFleetRequest
+            - ec2:RequestSpotFleet
+            - ec2:RequestSpotInstances
+            - ec2:TerminateInstances
+            - ec2:CreateTags
+            - iam:PassRole
+            - iam:ListRoles
+            - iam:ListInstanceProfiles
+            Effect: Allow
+            Resource: "*"
+        PolicyName: ec2-spot-fleet
+
+  SpotFleetConsul:
+    Type: AWS::EC2::SpotFleet
+    Properties:
+      SpotFleetRequestConfigData:
+        AllocationStrategy: lowestPrice
+        TargetCapacity: 1
+        IamFleetRole:
+          Fn::GetAtt:
+          - SpotFleetRole
+          - Arn
+        LaunchSpecifications:
+        - BlockDeviceMappings:
+          - DeviceName: "/dev/xvdcz"
+            Ebs:
+              DeleteOnTermination: 'true'
+              VolumeSize: !Ref VolumeSize
+              VolumeType: gp2
+          IamInstanceProfile:
+            Arn: !GetAtt InstanceProfile.Arn
+          ImageId: !Ref ImageId
+          InstanceType: t2.micro
+          KeyName: boston
+          WeightedCapacity: 1
+          Monitoring:
+            Enabled: 'true'
+          SecurityGroups:
+          - GroupId:
+              Ref: ConsulBadgeSG
+          - GroupId:
+              Ref: ConsulPort22SG
+
+          SpotPrice: '0.015'
+          SubnetId:
+            Fn::Join:
+            - ","
+            - - subnet-9b2938c2
+              - subnet-bc3193d8
+              - subnet-ed43849b
+          # TagSpecifications:
+          # - ResourceType: instance
+          #   Tags:
+          #   - Key: cluster
+          #     Value: kloudcover
+          UserData:
+            Fn::Base64:
+              Fn::Sub: |
+                #!/bin/bash -xe
+                s3fs kloudcover:/consul /mnt/consul -o iam_role="${InstanceRole}"
+
+                mkdir -p /efs
+                mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 fs-df827476.efs.${AWS::Region}.amazonaws.com:/ /efs
+
+
+        - BlockDeviceMappings:
+          WeightedCapacity: 1
+          - DeviceName: "/dev/xvdcz"
+            Ebs:
+              DeleteOnTermination: 'true'
+              VolumeSize: !Ref VolumeSize
+              VolumeType: gp2
+          IamInstanceProfile:
+            Arn: !GetAtt InstanceProfile.Arn
+          ImageId: !Ref ImageId
+          InstanceType: t2.small
+          KeyName: boston
+          Monitoring:
+            Enabled: 'true'
+          SecurityGroups:
+          - GroupId:
+              Ref: ConsulBadgeSG
+          - GroupId:
+              Ref: ConsulPort22SG
+          SpotPrice: '0.03'
+          SubnetId:
+            Fn::Join:
+            - ","
+            - - subnet-9b2938c2
+              - subnet-bc3193d8
+              - subnet-ed43849b
+          # TagSpecifications:
+          # - ResourceType: instance
+          #   Tags:
+          #   - Key: cluster
+          #     Value: kloudcover
+          UserData:
+            Fn::Base64:
+              Fn::Sub: |
+                #!/bin/bash -xe
+                s3fs kloudcover:/consul /mnt/consul -o iam_role="${InstanceRole}"
+
+                mkdir -p /efs
+                mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 fs-df827476.efs.${AWS::Region}.amazonaws.com:/ /efs

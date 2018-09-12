@@ -1,15 +1,15 @@
 pipeline:
-  pack_ami:
-    image: hashicorp/packer
+  # pack_ami:
+  #   image: hashicorp/packer
+  #   commands:
+  #     - cd packer
+  #     - packer build ami.json
+  deploy_consul:
+    image: ktruckenmiller/ansible:dind
+    environment:
+      - AWS_DEFAULT_REGION=us-west-2
     commands:
-      - cd packer
-      - packer build ami.json
-#   deploy_consul:
-#     image: ktruckenmiller/ansible:dind
-#     environment:
-#       - AWS_DEFAULT_REGION=us-west-2
-#     commands:
-#       - ansible-playbook -i ansible_connection=localhost deploy.yml -e region=us-west-2 -vvv
-#     when:
-#       event: [push]
-#       branch: [master]
+      - ansible-playbook -i ansible_connection=localhost deployment/deploy.yml -e region=us-west-2 -vvv
+    when:
+      event: [push]
+      branch: [master]
