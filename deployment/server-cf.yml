@@ -151,12 +151,13 @@ Resources:
 
 
         - BlockDeviceMappings:
-          WeightedCapacity: 1
+
           - DeviceName: "/dev/xvdcz"
             Ebs:
               DeleteOnTermination: 'true'
               VolumeSize: !Ref VolumeSize
               VolumeType: gp2
+          WeightedCapacity: 1
           IamInstanceProfile:
             Arn: !GetAtt InstanceProfile.Arn
           ImageId: !Ref ImageId
