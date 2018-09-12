@@ -1,0 +1,53 @@
+{
+  "builders": [
+    {
+      "type": "amazon-ebs",
+      "region": "us-west-2",
+      "source_ami_filter": {
+        "filters": {
+          "virtualization-type": "hvm",
+          "name": "amzn-ami-*-amazon-ecs-optimized",
+          "root-device-type": "ebs"
+        },
+        "owners": [
+          "amazon"
+        ],
+        "most_recent": true
+      },
+      "instance_type": "t2.micro",
+      "ssh_username": "ec2-user",
+      "ami_name": "consul-{{timestamp}}",
+      "tags": {
+        "source_ami": "{{.SourceAMI}}"
+      }
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "execute_command": "{{ .Vars }} sudo -E -S sh '{{ .Path }}'",
+      "script": "./script.sh"
+    }
+  ],
+  "post-processors": [
+    [
+      {
+        "output": "manifest.json",
+        "strip_path": true,
+        "type": "manifest"
+      },
+      {
+        "inline": [
+          "apk add jq --no-cache"
+        ],
+        "type": "shell-local"
+      },
+      {
+        "inline": [
+          "jq -r '.builds[-1].artifact_id | split(\":\")[1]' manifest.json > ami.txt"
+        ],
+        "type": "shell-local"
+      }
+    ]
+  ]
+}
