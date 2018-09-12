@@ -1,6 +1,6 @@
 stop ecs
 yum update -y
-yum install wget zip aws-cli jq nfs-utils aws-cfn-bootstrap -y
+yum install wget unzip zip aws-cli jq nfs-utils aws-cfn-bootstrap -y
 echo 'DOCKER_STORAGE_OPTIONS="--storage-driver overlay2"' > /etc/sysconfig/docker-storage
 service docker restart
 
