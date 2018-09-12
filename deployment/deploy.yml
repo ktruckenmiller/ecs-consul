@@ -15,6 +15,7 @@
   tasks:
     - shell: cat ami.txt
       register: ami
+      ignore_errors: true
 
     - name: cloudformation deploy
       cloudformation:
