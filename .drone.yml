@@ -1,9 +1,9 @@
 pipeline:
-  pack_ami:
-    image: hashicorp/packer
-    commands:
-      - cd packer
-      - packer build ami.json
+  # pack_ami:
+  #   image: hashicorp/packer
+  #   commands:
+  #     - cd packer
+  #     - packer build ami.json
   deploy_consul:
     image: ktruckenmiller/ansible:dind
     environment:

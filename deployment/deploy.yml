@@ -13,9 +13,7 @@
       - subnet-ed43849b
 
   tasks:
-    - shell: ls
-    - shell: ls packer
-    - shell: cat packer/ami.txt
+    - shell: cat ../packer/ami.txt
       register: ami
       ignore_errors: true
 
@@ -23,16 +21,16 @@
         ami_id: "{{ami.stdout}}"
       when: '"ami" in ami.stdout'
 
-    - debug: msg="{{ ami_id | default('boston')}}"
+    - debug: msg="{{ ami_id | default('ami-0067263472a0df1bd')}}"
 
-    # - name: cloudformation deploy
-    #   cloudformation:
-    #     stack_name: consul-server
-    #     template: server-cf.yml
-    #     region: "{{region}}"
-    #     template_parameters:
-    #       VpcId: "{{vpc_id}}"
-    #       ImageId: "{{image_id}}"
-    #   register: consul
-    #
-    # - debug: var=consul.stack_outputs
+    - name: cloudformation deploy
+      cloudformation:
+        stack_name: consul-server
+        template: server-cf.yml
+        region: "{{region}}"
+        template_parameters:
+          VpcId: "{{vpc_id}}"
+          ImageId: "{{image_id}}"
+      register: consul
+
+    - debug: var=consul.stack_outputs
