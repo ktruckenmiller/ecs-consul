@@ -5,7 +5,7 @@
     region: us-west-2
     # EFS stuff
     vpc_id: vpc-849531e0
-    image_id: ami-0067263472a0df1bd
+    image_id: ami-00706db3e8a388b1b
     security_group: sg-36ab3149
     kms_key: 4bacdbef-cc46-41fd-b333-2623977cbf83
     efs_subnet:

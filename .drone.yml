@@ -1,4 +1,5 @@
 pipeline:
+  #### Uncomment this to auto build a new ami every time
   pack_ami:
     image: hashicorp/packer
     commands:

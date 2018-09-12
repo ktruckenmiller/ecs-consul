@@ -28,5 +28,4 @@ unzip consul_1.2.2_linux_amd64.zip
 mv consul /usr/bin
 chmod +x /usr/bin/consul
 
-# run this in the cloudformation
-# s3fs fetchit /mnt/consul -o iam_role="role of instance"
+rm /etc/init/ecs.conf
