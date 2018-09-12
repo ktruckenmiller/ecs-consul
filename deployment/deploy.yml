@@ -21,9 +21,9 @@
         ami_id: "{{ami.stdout}}"
       when: '"ami" in ami.stdout'
 
-    - set_fact:
-        ami_id: ""
-      when: '"ami" not in ami.stdout'
+    # - set_fact:
+    #     ami_id: ""
+    #   when: '"ami" not in ami.stdout'
 
     - debug: msg="{{ ami_id | default('boston')}}"
 
