@@ -28,7 +28,7 @@
         region: "{{region}}"
         template_parameters:
           VpcId: "{{vpc_id}}"
-          ImageId: "{{ ami_id | default('ami-0067263472a0df1bd')}}"
+          ImageId: "{{ ami_id | default(image_id)}}"
       register: consul
 
     - debug: var=consul.stack_outputs
