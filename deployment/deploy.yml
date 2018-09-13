@@ -17,7 +17,7 @@
       register: ami
       ignore_errors: true
 
-    - shell: curl https://my-ip.clustermaestro.com
+    - shell: dig +short vpn.kloudcover.com
       register: home_ip
 
     - set_fact:
