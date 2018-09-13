@@ -5,7 +5,7 @@ yum install wget \
             git \
             zip \
             aws-cli \
-            gcc gcc-c++ autoconf automake fuse-devel curl-devel libxml2-devel openssl-devel \
+            gcc gcc-c++ autoconf automake fuse-devel curl-devel libxml2-devel openssl-devel htop \
             jq nfs-utils aws-cfn-bootstrap -y
 echo 'DOCKER_STORAGE_OPTIONS="--storage-driver overlay2"' > /etc/sysconfig/docker-storage
 service docker restart

@@ -149,8 +149,10 @@ Resources:
             Fn::Base64:
               Fn::Sub: |
                 #!/bin/bash -xe
-                consul agent -retry-join "provider=aws tag_key=Name tag_value=consul-server"
-
+                consul agent \
+                  -retry-join "provider=aws tag_key=Name tag_value=consul-server" \
+                  -bind $(curl http://169.254.169.254/latest/meta-data/local-ipv4) \
+                  -data-dir /home/ec2-user/consul
 
         - BlockDeviceMappings:
 
@@ -188,4 +190,7 @@ Resources:
             Fn::Base64:
               Fn::Sub: |
                 #!/bin/bash -xe
-                consul agent -retry-join "provider=aws tag_key=Name tag_value=consul-server"
+                consul agent \
+                  -retry-join "provider=aws tag_key=Name tag_value=consul-server" \
+                  -bind $(curl http://169.254.169.254/latest/meta-data/local-ipv4) \
+                  -data-dir /home/ec2-user/consul
