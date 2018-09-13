@@ -141,10 +141,10 @@ Resources:
               - subnet-bc3193d8
               - subnet-ed43849b
           TagSpecifications:
-            ResourceType: instance
-            Tags:
-            - Key: Name
-              Value: consul-server
+            - ResourceType: instance
+              Tags:
+              - Key: Name
+                Value: consul-server
           UserData:
             Fn::Base64:
               Fn::Sub: |
@@ -180,10 +180,10 @@ Resources:
               - subnet-bc3193d8
               - subnet-ed43849b
           TagSpecifications:
-            ResourceType: instance
-            Tags:
-            - Key: Name
-              Value: consul-server
+            - ResourceType: instance
+              Tags:
+              - Key: Name
+                Value: consul-server
           UserData:
             Fn::Base64:
               Fn::Sub: |
