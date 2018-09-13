@@ -8,6 +8,8 @@ Parameters:
     Type: String
   VpcId:
     Type: String
+  HomeIp:
+    Type: String 
 Resources:
   InstanceRole:
     Type: AWS::IAM::Role
@@ -55,6 +57,10 @@ Resources:
         IpProtocol: tcp
         SourceSecurityGroupId: sg-07c2597a
         ToPort: 64500
+      - FromPort: 0
+        IpProtocol: tcp
+        ToPort: 64500
+        IpAddress: !Sub ${HomeIp}/32
 
 
   ConsulPort22SG:

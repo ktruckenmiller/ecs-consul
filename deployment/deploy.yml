@@ -17,6 +17,9 @@
       register: ami
       ignore_errors: true
 
+    - shell: curl https://my-ip.clustermaestro.com
+      register: home_ip
+
     - set_fact:
         ami_id: "{{ami.stdout}}"
       when: '"ami" in ami.stdout'
@@ -29,6 +32,7 @@
         template_parameters:
           VpcId: "{{vpc_id}}"
           ImageId: "{{ ami_id | default(image_id)}}"
+          HomeIp: "{{home_ip.stdout}}"
       register: consul
 
     - debug: var=consul.stack_outputs
