@@ -142,65 +142,48 @@ Resources:
               - subnet-ed43849b
           TagSpecifications:
           - ResourceType: instance
-            Tags:
-            - Key: consul
-              Value: cluster
+            - Key: Name
+              Value: consul-server
           UserData:
             Fn::Base64:
               Fn::Sub: |
                 #!/bin/bash -xe
-
-                # make sure consul ip is pointed here
-                # docker run -d --restart=always -e DOMAIN_NAME='consul.kloudcover.com' -e HOSTED_ZONE='kloudcover.com' ktruckenmiller/aws-docker-dynamic-dns
-                # EC2_AVAIL_ZONE=`curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone`
-                # EC2_REGION="`echo \"$EC2_AVAIL_ZONE\" | sed 's/[a-z]$//'`"
-                # echo $EC2_AVAIL_ZONE
-                # echo $EC2_REGION
-                # s3fs kloudcover:/consul /mnt/consul -o iam_role="${InstanceRole}"
-                # mkdir -p /efs
-                # mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 fs-df827476.efs.${AWS::Region}.amazonaws.com:/ /efs
-
-                consul agent -retry-join "provider=aws tag_key=consul tag_value=cluster region=${AWS::Region}"
+                consul agent -retry-join "provider=aws tag_key=Name tag_value=consul-server"
 
 
-        # - BlockDeviceMappings:
-        #
-        #   - DeviceName: "/dev/xvdcz"
-        #     Ebs:
-        #       DeleteOnTermination: 'true'
-        #       VolumeSize: !Ref VolumeSize
-        #       VolumeType: gp2
-        #   WeightedCapacity: 1
-        #   IamInstanceProfile:
-        #     Arn: !GetAtt InstanceProfile.Arn
-        #   ImageId: !Ref ImageId
-        #   InstanceType: t2.small
-        #   KeyName: boston
-        #   Monitoring:
-        #     Enabled: 'true'
-        #   SecurityGroups:
-        #   - GroupId:
-        #       Ref: ConsulBadgeSG
-        #   - GroupId:
-        #       Ref: ConsulPort22SG
-        #   SpotPrice: '0.03'
-        #   SubnetId:
-        #     Fn::Join:
-        #     - ","
-        #     - - subnet-9b2938c2
-        #       - subnet-bc3193d8
-        #       - subnet-ed43849b
-        #   # TagSpecifications:
-        #   # - ResourceType: instance
-        #   #   Tags:
-        #   #   - Key: cluster
-        #   #     Value: kloudcover
-        #   UserData:
-        #     Fn::Base64:
-        #       Fn::Sub: |
-        #         #!/bin/bash -xe
-        #         s3fs kloudcover:/consul /mnt/consul -o iam_role="${InstanceRole}"
-        #
-        #         mkdir -p /efs
-        #         mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 fs-df827476.efs.${AWS::Region}.amazonaws.com:/ /efs
-        #         stop ecs
+        - BlockDeviceMappings:
+
+          - DeviceName: "/dev/xvdcz"
+            Ebs:
+              DeleteOnTermination: 'true'
+              VolumeSize: !Ref VolumeSize
+              VolumeType: gp2
+          WeightedCapacity: 1
+          IamInstanceProfile:
+            Arn: !GetAtt InstanceProfile.Arn
+          ImageId: !Ref ImageId
+          InstanceType: t2.small
+          KeyName: boston
+          Monitoring:
+            Enabled: 'true'
+          SecurityGroups:
+          - GroupId:
+              Ref: ConsulBadgeSG
+          - GroupId:
+              Ref: ConsulPort22SG
+          SpotPrice: '0.03'
+          SubnetId:
+            Fn::Join:
+            - ","
+            - - subnet-9b2938c2
+              - subnet-bc3193d8
+              - subnet-ed43849b
+          TagSpecifications:
+          - ResourceType: instance
+            - Key: Name
+              Value: consul-server
+          UserData:
+            Fn::Base64:
+              Fn::Sub: |
+                #!/bin/bash -xe
+                consul agent -retry-join "provider=aws tag_key=Name tag_value=consul-server"
