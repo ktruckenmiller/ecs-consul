@@ -141,7 +141,7 @@ Resources:
               - subnet-bc3193d8
               - subnet-ed43849b
           TagSpecifications:
-          - ResourceType: instance
+            ResourceType: instance
             - Key: Name
               Value: consul-server
           UserData:
@@ -179,7 +179,7 @@ Resources:
               - subnet-bc3193d8
               - subnet-ed43849b
           TagSpecifications:
-          - ResourceType: instance
+            ResourceType: instance
             - Key: Name
               Value: consul-server
           UserData:
