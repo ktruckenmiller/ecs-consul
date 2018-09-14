@@ -6,7 +6,7 @@ pipeline:
   #     - cd packer
   #     - packer build ami.json
   deploy_consul:
-    image: ktruckenmiller/ansible:dind
+    image: ktruckenmiller/ansible
     environment:
       - AWS_DEFAULT_REGION=us-west-2
     commands:
