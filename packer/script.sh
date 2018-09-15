@@ -1,5 +1,5 @@
 stop ecs
-VERSION=1.2.3
+
 yum update -y
 yum install wget \
             unzip \
@@ -24,9 +24,10 @@ cd ..
 
 
 # consul
-wget https://releases.hashicorp.com/consul/$VERSION/consul_$VERSION_linux_amd64.zip
-unzip consul_$VERSION_linux_amd64.zip
-mv consul /usr/bin
+export VERSION=1.2.3 && \
+wget https://releases.hashicorp.com/consul/${VERSION}/consul_${VERSION}_linux_amd64.zip && \
+unzip consul_${VERSION}_linux_amd64.zip && \
+mv consul /usr/bin && \
 chmod +x /usr/bin/consul
 
 rm /etc/init/ecs.conf
