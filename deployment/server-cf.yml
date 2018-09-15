@@ -177,7 +177,7 @@ Resources:
                 tee /etc/consul.d/config.json > /dev/null <<EOF
                 {
                   "bind_addr": "$PRIVATE_IP",
-                  "client": "$PUBLIC_IP",
+                  "client_addr": "$PUBLIC_IP",
                   "advertise_addr": "$PRIVATE_IP",
                   "advertise_addr_wan": "$PUBLIC_IP",
                   "data_dir": "/mnt/consul",
