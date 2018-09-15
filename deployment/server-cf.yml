@@ -177,6 +177,7 @@ Resources:
                 tee /etc/consul.d/config.json > /dev/null <<EOF
                 {
                   "bind_addr": "$PRIVATE_IP",
+                  "client": "$PUBLIC_IP",
                   "advertise_addr": "$PRIVATE_IP",
                   "advertise_addr_wan": "$PUBLIC_IP",
                   "data_dir": "/mnt/consul",
@@ -185,7 +186,8 @@ Resources:
                   "leave_on_terminate": true,
                   "bootstrap_expect": 3,
                   "retry_join": ["provider=aws tag_key=Name tag_value=consul-server"],
-                  "server": true
+                  "server": true,
+                  "ui": true
                 }
                 EOF
 
