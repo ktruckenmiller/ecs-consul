@@ -5,7 +5,7 @@
     region: us-west-2
     # EFS stuff
     vpc_id: vpc-849531e0
-    image_id: ami-0e6c2dcfa44029dcc
+    image_id: ami-0062abacb9034c429
     security_group: sg-36ab3149
     kms_key: 4bacdbef-cc46-41fd-b333-2623977cbf83
     efs_subnet:
@@ -16,6 +16,8 @@
     - shell: cat ../packer/ami.txt
       register: ami
       ignore_errors: true
+
+
 
     - shell: dig +short vpn.kloudcover.com
       register: home_ip

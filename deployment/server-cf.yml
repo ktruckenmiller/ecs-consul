@@ -173,7 +173,7 @@ Resources:
                   "disable_remote_exec": true,
                   "disable_update_check": true,
                   "leave_on_terminate": true,
-                  ${config}
+                  $\{config\}
                 }
                 EOF
 
