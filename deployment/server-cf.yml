@@ -64,7 +64,7 @@ Resources:
 
   IngressBadge:
     Type: AWS::EC2::SecurityGroupIngress
-    DependsOn:
+    DependsOn: ConsulBadgeSG
     Properties:
       FromPort: 0
       IpProtocol: tcp
