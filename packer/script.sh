@@ -1,4 +1,5 @@
 stop ecs
+VERSION=1.2.3
 yum update -y
 yum install wget \
             unzip \
@@ -23,8 +24,8 @@ cd ..
 
 
 # consul
-wget https://releases.hashicorp.com/consul/1.2.2/consul_1.2.2_linux_amd64.zip
-unzip consul_1.2.2_linux_amd64.zip
+wget https://releases.hashicorp.com/consul/$VERSION/consul_$VERSION_linux_amd64.zip
+unzip consul_$VERSION_linux_amd64.zip
 mv consul /usr/bin
 chmod +x /usr/bin/consul
 
