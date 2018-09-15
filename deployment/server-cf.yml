@@ -67,7 +67,7 @@ Resources:
     DependsOn: ConsulBadgeSG
     Properties:
       FromPort: 0
-      IpProtocol: tcp
+      IpProtocol: -1
       ToPort: 64500
       SourceSecurityGroupId: !GetAtt ConsulBadgeSG.GroupId
       GroupId: !GetAtt ConsulBadgeSG.GroupId
