@@ -54,7 +54,7 @@ Resources:
       GroupDescription: SG for ecs instances to connect to the cluster
       SecurityGroupIngress:
       - FromPort: 0
-        IpProtocol: tcp
+        IpProtocol: -1
         SourceSecurityGroupId: sg-07c2597a
         ToPort: 64500
       - FromPort: 0
