@@ -62,6 +62,16 @@ Resources:
         ToPort: 64500
         CidrIp: !Sub ${HomeIp}/32
 
+  IngressBadge:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn:
+    Properties:
+      FromPort: 0
+      IpProtocol: tcp
+      ToPort: 64500
+      SourceSecurityGroupId: !GetAtt ConsulBadgeSG.GroupId
+      GroupId: !GetAtt ConsulBadgeSG.GroupId
+
 
   ConsulPort22SG:
     Type: AWS::EC2::SecurityGroup
