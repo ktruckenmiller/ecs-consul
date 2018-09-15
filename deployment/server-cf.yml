@@ -180,7 +180,7 @@ Resources:
                   "client_addr": "0.0.0.0",
                   "connect": {
                     "enabled": true
-                  }
+                  },
                   "advertise_addr": "$PRIVATE_IP",
                   "advertise_addr_wan": "$PUBLIC_IP",
                   "data_dir": "/mnt/consul",
