@@ -38,7 +38,7 @@
 
   export AZ=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
   if [ $AZ = "us-west-2a" ]; then
-    echo "We are in ${AZ}. I will back things up."
+    echo "We are in $AZ. I will back things up."
     while true; do
       sleep 43200
       echo "Starting backup."
