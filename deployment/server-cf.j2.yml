@@ -1,0 +1,171 @@
+{% macro include(file) %}{% include(file) %}{% endmacro %}
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  VolumeSize:
+    Default: 22
+    Type: String
+  ImageId:
+    Type: String
+  VpcId:
+    Type: String
+  HomeIp:
+    Type: String
+Resources:
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service: ec2.amazonaws.com
+      Policies:
+      - PolicyName: consul-instance
+        PolicyDocument:
+          Statement:
+          - Action:
+            - s3:*
+            Effect: Allow
+            Resource:
+              - !Sub arn:aws:s3:::kloudcover/consul/*
+          - Action:
+            - s3:List*
+            Effect: Allow
+            Resource:
+              - !Sub arn:aws:s3:::kloudcover
+          - Action:
+            - ec2:DescribeInstances
+            Effect: Allow
+            Resource:
+              - '*'
+          - Action:
+            - ssm:Get*
+            - ssm:Put*
+            - ssm:Delete*
+            Effect: Allow
+            Resource:
+            - Fn::Sub: arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/consul/*
+
+  ConsulBadgeSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: SG for ecs instances to connect to the cluster
+      SecurityGroupIngress:
+      - FromPort: 0
+        IpProtocol: -1
+        SourceSecurityGroupId: sg-07c2597a
+        ToPort: 64500
+      - FromPort: 0
+        IpProtocol: tcp
+        ToPort: 64500
+        CidrIp: !Sub ${HomeIp}/32
+
+  IngressBadge:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: ConsulBadgeSG
+    Properties:
+      FromPort: 0
+      IpProtocol: -1
+      ToPort: 64500
+      SourceSecurityGroupId: !GetAtt ConsulBadgeSG.GroupId
+      GroupId: !GetAtt ConsulBadgeSG.GroupId
+
+
+  ConsulPort22SG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: SSH for me
+      SecurityGroupIngress:
+      - CidrIp: 0.0.0.0/0
+        FromPort: 22
+        IpProtocol: tcp
+        ToPort: 22
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref InstanceRole
+
+  SpotFleetRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service: spotfleet.amazonaws.com
+      Policies:
+      - PolicyDocument:
+          Statement:
+          - Action:
+            - ec2:Describe*
+            - ec2:CancelSpotFleetRequests
+            - ec2:CancelSpotInstanceRequests
+            - ec2:ModifySpotFleetRequest
+            - ec2:RequestSpotFleet
+            - ec2:RequestSpotInstances
+            - ec2:TerminateInstances
+            - ec2:CreateTags
+            - iam:PassRole
+            - iam:ListRoles
+            - iam:ListInstanceProfiles
+            Effect: Allow
+            Resource: "*"
+        PolicyName: ec2-spot-fleet
+{% for spot in spots %}
+  SpotFleetConsul{{ loop.index }}:
+{% if loop.index == 2 %}
+    DependsOn: SpotFleetConsul1
+{% elif loop.index == 3 %}
+    DependsOn: SpotFleetConsul2
+{% endif %}
+    Type: AWS::EC2::SpotFleet
+    Properties:
+      SpotFleetRequestConfigData:
+        AllocationStrategy: diversified
+        TargetCapacity: 1
+        IamFleetRole:
+          Fn::GetAtt:
+          - SpotFleetRole
+          - Arn
+        LaunchSpecifications:
+{% for instance in instance_types %}
+        - BlockDeviceMappings:
+          - DeviceName: "/dev/xvdcz"
+            Ebs:
+              DeleteOnTermination: 'true'
+              VolumeSize: !Ref VolumeSize
+              VolumeType: gp2
+          IamInstanceProfile:
+            Arn: !GetAtt InstanceProfile.Arn
+          ImageId: !Ref ImageId
+          InstanceType: {{instance}}
+          KeyName: boston
+          WeightedCapacity: 1
+          Monitoring:
+            Enabled: 'true'
+          SecurityGroups:
+          - GroupId:
+              Ref: ConsulBadgeSG
+          - GroupId:
+              Ref: ConsulPort22SG
+
+          SpotPrice: '0.015'
+          SubnetId: {{ spot.subnet }}
+          TagSpecifications:
+            - ResourceType: instance
+              Tags:
+              - Key: Name
+                Value: consul-server
+          UserData:
+            Fn::Base64:
+              Fn::Sub:
+                {{ include('user_data.j2.yml') | indent(16) }}
+{% endfor %} # instance types
+{% endfor %} # for spots

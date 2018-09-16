@@ -117,13 +117,12 @@ Resources:
             Effect: Allow
             Resource: "*"
         PolicyName: ec2-spot-fleet
-
-  SpotFleetConsul:
+  SpotFleetConsul1:
     Type: AWS::EC2::SpotFleet
     Properties:
       SpotFleetRequestConfigData:
         AllocationStrategy: diversified
-        TargetCapacity: 3
+        TargetCapacity: 1
         IamFleetRole:
           Fn::GetAtt:
           - SpotFleetRole
@@ -150,12 +149,7 @@ Resources:
               Ref: ConsulPort22SG
 
           SpotPrice: '0.015'
-          SubnetId:
-            Fn::Join:
-            - ","
-            - - subnet-9b2938c2
-              - subnet-bc3193d8
-              - subnet-ed43849b
+          SubnetId: subnet-bc3193d8
           TagSpecifications:
             - ResourceType: instance
               Tags:
@@ -164,14 +158,12 @@ Resources:
           UserData:
             Fn::Base64:
               Fn::Sub:
-                - |
+                  |
                   #!/bin/bash -xe
                   set -e
 
                   # mkdir -p /efs
                   # mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 fs-df827476.efs.us-west-2.amazonaws.com:/ /efs
-
-
 
                   echo "Grabbing IPs..."
                   PRIVATE_IP=$(curl http://169.254.169.254/latest/meta-data/local-ipv4)
@@ -179,9 +171,8 @@ Resources:
 
                   # Setup Consul
                   mkdir -p /etc/consul.d
-                  mkdir -p /mnt/consul
                   mkdir -p /tmp/consul
-                  s3fs kloudcover:/consul /mnt/consul -o iam_role="${InstanceRoleThing}"
+
                   tee /etc/consul.d/config.json > /dev/null <<EOF
                   {
                     "bind_addr": "$PRIVATE_IP",
@@ -202,46 +193,686 @@ Resources:
                   }
                   EOF
 
-                  consul agent -config-dir="/etc/consul.d"
+                  consul agent -config-dir="/etc/consul.d" &
+                  AZ=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
 
-                - { InstanceRoleThing: !GetAtt InstanceRole.Arn }
-        # - BlockDeviceMappings:
-        #
-        #   - DeviceName: "/dev/xvdcz"
-        #     Ebs:
-        #       DeleteOnTermination: 'true'
-        #       VolumeSize: !Ref VolumeSize
-        #       VolumeType: gp2
-        #   WeightedCapacity: 1
-        #   IamInstanceProfile:
-        #     Arn: !GetAtt InstanceProfile.Arn
-        #   ImageId: !Ref ImageId
-        #   InstanceType: t2.small
-        #   KeyName: boston
-        #   Monitoring:
-        #     Enabled: 'true'
-        #   SecurityGroups:
-        #   - GroupId:
-        #       Ref: ConsulBadgeSG
-        #   - GroupId:
-        #       Ref: ConsulPort22SG
-        #   SpotPrice: '0.03'
-        #   SubnetId:
-        #     Fn::Join:
-        #     - ","
-        #     - - subnet-9b2938c2
-        #       - subnet-bc3193d8
-        #       - subnet-ed43849b
-        #   TagSpecifications:
-        #     - ResourceType: instance
-        #       Tags:
-        #       - Key: Name
-        #         Value: consul-server
-        #   UserData:
-        #     Fn::Base64:
-        #       Fn::Sub: |
-        #         #!/bin/bash -xe
-        #         consul agent \
-        #           -retry-join "provider=aws tag_key=Name tag_value=consul-server" \
-        #           -bind $(curl http://169.254.169.254/latest/meta-data/local-ipv4) \
-        #           -data-dir /home/ec2-user/consul
+                  export AZ=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
+                  if [ $AZ = "us-west-2a" ]; then
+                    echo "We are in ${AZ}. I will back things up."
+                    while true; do
+                      sleep 43200
+                      echo "Starting backup."
+                      export BOSTON=$(date +%Y%m%d%H%M)
+                      consul snapshot save $BOSTON.snap
+                      aws s3 cp $BOSTON.snap s3://kloudcover/consul/$BOSTON.snap
+                      echo "Backed up consul."
+                    done
+                  fi
+        - BlockDeviceMappings:
+          - DeviceName: "/dev/xvdcz"
+            Ebs:
+              DeleteOnTermination: 'true'
+              VolumeSize: !Ref VolumeSize
+              VolumeType: gp2
+          IamInstanceProfile:
+            Arn: !GetAtt InstanceProfile.Arn
+          ImageId: !Ref ImageId
+          InstanceType: m3.medium
+          KeyName: boston
+          WeightedCapacity: 1
+          Monitoring:
+            Enabled: 'true'
+          SecurityGroups:
+          - GroupId:
+              Ref: ConsulBadgeSG
+          - GroupId:
+              Ref: ConsulPort22SG
+
+          SpotPrice: '0.015'
+          SubnetId: subnet-bc3193d8
+          TagSpecifications:
+            - ResourceType: instance
+              Tags:
+              - Key: Name
+                Value: consul-server
+          UserData:
+            Fn::Base64:
+              Fn::Sub:
+                  |
+                  #!/bin/bash -xe
+                  set -e
+
+                  # mkdir -p /efs
+                  # mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 fs-df827476.efs.us-west-2.amazonaws.com:/ /efs
+
+                  echo "Grabbing IPs..."
+                  PRIVATE_IP=$(curl http://169.254.169.254/latest/meta-data/local-ipv4)
+                  PUBLIC_IP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)
+
+                  # Setup Consul
+                  mkdir -p /etc/consul.d
+                  mkdir -p /tmp/consul
+
+                  tee /etc/consul.d/config.json > /dev/null <<EOF
+                  {
+                    "bind_addr": "$PRIVATE_IP",
+                    "client_addr": "0.0.0.0",
+                    "connect": {
+                      "enabled": true
+                    },
+                    "advertise_addr": "$PRIVATE_IP",
+                    "advertise_addr_wan": "$PUBLIC_IP",
+                    "data_dir": "/tmp/consul",
+                    "disable_remote_exec": true,
+                    "disable_update_check": true,
+                    "leave_on_terminate": true,
+                    "bootstrap_expect": 3,
+                    "retry_join": ["provider=aws tag_key=Name tag_value=consul-server"],
+                    "server": true,
+                    "ui": true
+                  }
+                  EOF
+
+                  consul agent -config-dir="/etc/consul.d" &
+                  AZ=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
+
+                  export AZ=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
+                  if [ $AZ = "us-west-2a" ]; then
+                    echo "We are in ${AZ}. I will back things up."
+                    while true; do
+                      sleep 43200
+                      echo "Starting backup."
+                      export BOSTON=$(date +%Y%m%d%H%M)
+                      consul snapshot save $BOSTON.snap
+                      aws s3 cp $BOSTON.snap s3://kloudcover/consul/$BOSTON.snap
+                      echo "Backed up consul."
+                    done
+                  fi
+        - BlockDeviceMappings:
+          - DeviceName: "/dev/xvdcz"
+            Ebs:
+              DeleteOnTermination: 'true'
+              VolumeSize: !Ref VolumeSize
+              VolumeType: gp2
+          IamInstanceProfile:
+            Arn: !GetAtt InstanceProfile.Arn
+          ImageId: !Ref ImageId
+          InstanceType: t2.small
+          KeyName: boston
+          WeightedCapacity: 1
+          Monitoring:
+            Enabled: 'true'
+          SecurityGroups:
+          - GroupId:
+              Ref: ConsulBadgeSG
+          - GroupId:
+              Ref: ConsulPort22SG
+
+          SpotPrice: '0.015'
+          SubnetId: subnet-bc3193d8
+          TagSpecifications:
+            - ResourceType: instance
+              Tags:
+              - Key: Name
+                Value: consul-server
+          UserData:
+            Fn::Base64:
+              Fn::Sub:
+                  |
+                  #!/bin/bash -xe
+                  set -e
+
+                  # mkdir -p /efs
+                  # mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 fs-df827476.efs.us-west-2.amazonaws.com:/ /efs
+
+                  echo "Grabbing IPs..."
+                  PRIVATE_IP=$(curl http://169.254.169.254/latest/meta-data/local-ipv4)
+                  PUBLIC_IP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)
+
+                  # Setup Consul
+                  mkdir -p /etc/consul.d
+                  mkdir -p /tmp/consul
+
+                  tee /etc/consul.d/config.json > /dev/null <<EOF
+                  {
+                    "bind_addr": "$PRIVATE_IP",
+                    "client_addr": "0.0.0.0",
+                    "connect": {
+                      "enabled": true
+                    },
+                    "advertise_addr": "$PRIVATE_IP",
+                    "advertise_addr_wan": "$PUBLIC_IP",
+                    "data_dir": "/tmp/consul",
+                    "disable_remote_exec": true,
+                    "disable_update_check": true,
+                    "leave_on_terminate": true,
+                    "bootstrap_expect": 3,
+                    "retry_join": ["provider=aws tag_key=Name tag_value=consul-server"],
+                    "server": true,
+                    "ui": true
+                  }
+                  EOF
+
+                  consul agent -config-dir="/etc/consul.d" &
+                  AZ=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
+
+                  export AZ=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
+                  if [ $AZ = "us-west-2a" ]; then
+                    echo "We are in ${AZ}. I will back things up."
+                    while true; do
+                      sleep 43200
+                      echo "Starting backup."
+                      export BOSTON=$(date +%Y%m%d%H%M)
+                      consul snapshot save $BOSTON.snap
+                      aws s3 cp $BOSTON.snap s3://kloudcover/consul/$BOSTON.snap
+                      echo "Backed up consul."
+                    done
+                  fi
+ # instance types
+  SpotFleetConsul2:
+    DependsOn: SpotFleetConsul1
+    Type: AWS::EC2::SpotFleet
+    Properties:
+      SpotFleetRequestConfigData:
+        AllocationStrategy: diversified
+        TargetCapacity: 1
+        IamFleetRole:
+          Fn::GetAtt:
+          - SpotFleetRole
+          - Arn
+        LaunchSpecifications:
+        - BlockDeviceMappings:
+          - DeviceName: "/dev/xvdcz"
+            Ebs:
+              DeleteOnTermination: 'true'
+              VolumeSize: !Ref VolumeSize
+              VolumeType: gp2
+          IamInstanceProfile:
+            Arn: !GetAtt InstanceProfile.Arn
+          ImageId: !Ref ImageId
+          InstanceType: t2.micro
+          KeyName: boston
+          WeightedCapacity: 1
+          Monitoring:
+            Enabled: 'true'
+          SecurityGroups:
+          - GroupId:
+              Ref: ConsulBadgeSG
+          - GroupId:
+              Ref: ConsulPort22SG
+
+          SpotPrice: '0.015'
+          SubnetId: subnet-ed43849b
+          TagSpecifications:
+            - ResourceType: instance
+              Tags:
+              - Key: Name
+                Value: consul-server
+          UserData:
+            Fn::Base64:
+              Fn::Sub:
+                  |
+                  #!/bin/bash -xe
+                  set -e
+
+                  # mkdir -p /efs
+                  # mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 fs-df827476.efs.us-west-2.amazonaws.com:/ /efs
+
+                  echo "Grabbing IPs..."
+                  PRIVATE_IP=$(curl http://169.254.169.254/latest/meta-data/local-ipv4)
+                  PUBLIC_IP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)
+
+                  # Setup Consul
+                  mkdir -p /etc/consul.d
+                  mkdir -p /tmp/consul
+
+                  tee /etc/consul.d/config.json > /dev/null <<EOF
+                  {
+                    "bind_addr": "$PRIVATE_IP",
+                    "client_addr": "0.0.0.0",
+                    "connect": {
+                      "enabled": true
+                    },
+                    "advertise_addr": "$PRIVATE_IP",
+                    "advertise_addr_wan": "$PUBLIC_IP",
+                    "data_dir": "/tmp/consul",
+                    "disable_remote_exec": true,
+                    "disable_update_check": true,
+                    "leave_on_terminate": true,
+                    "bootstrap_expect": 3,
+                    "retry_join": ["provider=aws tag_key=Name tag_value=consul-server"],
+                    "server": true,
+                    "ui": true
+                  }
+                  EOF
+
+                  consul agent -config-dir="/etc/consul.d" &
+                  AZ=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
+
+                  export AZ=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
+                  if [ $AZ = "us-west-2a" ]; then
+                    echo "We are in ${AZ}. I will back things up."
+                    while true; do
+                      sleep 43200
+                      echo "Starting backup."
+                      export BOSTON=$(date +%Y%m%d%H%M)
+                      consul snapshot save $BOSTON.snap
+                      aws s3 cp $BOSTON.snap s3://kloudcover/consul/$BOSTON.snap
+                      echo "Backed up consul."
+                    done
+                  fi
+        - BlockDeviceMappings:
+          - DeviceName: "/dev/xvdcz"
+            Ebs:
+              DeleteOnTermination: 'true'
+              VolumeSize: !Ref VolumeSize
+              VolumeType: gp2
+          IamInstanceProfile:
+            Arn: !GetAtt InstanceProfile.Arn
+          ImageId: !Ref ImageId
+          InstanceType: m3.medium
+          KeyName: boston
+          WeightedCapacity: 1
+          Monitoring:
+            Enabled: 'true'
+          SecurityGroups:
+          - GroupId:
+              Ref: ConsulBadgeSG
+          - GroupId:
+              Ref: ConsulPort22SG
+
+          SpotPrice: '0.015'
+          SubnetId: subnet-ed43849b
+          TagSpecifications:
+            - ResourceType: instance
+              Tags:
+              - Key: Name
+                Value: consul-server
+          UserData:
+            Fn::Base64:
+              Fn::Sub:
+                  |
+                  #!/bin/bash -xe
+                  set -e
+
+                  # mkdir -p /efs
+                  # mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 fs-df827476.efs.us-west-2.amazonaws.com:/ /efs
+
+                  echo "Grabbing IPs..."
+                  PRIVATE_IP=$(curl http://169.254.169.254/latest/meta-data/local-ipv4)
+                  PUBLIC_IP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)
+
+                  # Setup Consul
+                  mkdir -p /etc/consul.d
+                  mkdir -p /tmp/consul
+
+                  tee /etc/consul.d/config.json > /dev/null <<EOF
+                  {
+                    "bind_addr": "$PRIVATE_IP",
+                    "client_addr": "0.0.0.0",
+                    "connect": {
+                      "enabled": true
+                    },
+                    "advertise_addr": "$PRIVATE_IP",
+                    "advertise_addr_wan": "$PUBLIC_IP",
+                    "data_dir": "/tmp/consul",
+                    "disable_remote_exec": true,
+                    "disable_update_check": true,
+                    "leave_on_terminate": true,
+                    "bootstrap_expect": 3,
+                    "retry_join": ["provider=aws tag_key=Name tag_value=consul-server"],
+                    "server": true,
+                    "ui": true
+                  }
+                  EOF
+
+                  consul agent -config-dir="/etc/consul.d" &
+                  AZ=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
+
+                  export AZ=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
+                  if [ $AZ = "us-west-2a" ]; then
+                    echo "We are in ${AZ}. I will back things up."
+                    while true; do
+                      sleep 43200
+                      echo "Starting backup."
+                      export BOSTON=$(date +%Y%m%d%H%M)
+                      consul snapshot save $BOSTON.snap
+                      aws s3 cp $BOSTON.snap s3://kloudcover/consul/$BOSTON.snap
+                      echo "Backed up consul."
+                    done
+                  fi
+        - BlockDeviceMappings:
+          - DeviceName: "/dev/xvdcz"
+            Ebs:
+              DeleteOnTermination: 'true'
+              VolumeSize: !Ref VolumeSize
+              VolumeType: gp2
+          IamInstanceProfile:
+            Arn: !GetAtt InstanceProfile.Arn
+          ImageId: !Ref ImageId
+          InstanceType: t2.small
+          KeyName: boston
+          WeightedCapacity: 1
+          Monitoring:
+            Enabled: 'true'
+          SecurityGroups:
+          - GroupId:
+              Ref: ConsulBadgeSG
+          - GroupId:
+              Ref: ConsulPort22SG
+
+          SpotPrice: '0.015'
+          SubnetId: subnet-ed43849b
+          TagSpecifications:
+            - ResourceType: instance
+              Tags:
+              - Key: Name
+                Value: consul-server
+          UserData:
+            Fn::Base64:
+              Fn::Sub:
+                  |
+                  #!/bin/bash -xe
+                  set -e
+
+                  # mkdir -p /efs
+                  # mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 fs-df827476.efs.us-west-2.amazonaws.com:/ /efs
+
+                  echo "Grabbing IPs..."
+                  PRIVATE_IP=$(curl http://169.254.169.254/latest/meta-data/local-ipv4)
+                  PUBLIC_IP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)
+
+                  # Setup Consul
+                  mkdir -p /etc/consul.d
+                  mkdir -p /tmp/consul
+
+                  tee /etc/consul.d/config.json > /dev/null <<EOF
+                  {
+                    "bind_addr": "$PRIVATE_IP",
+                    "client_addr": "0.0.0.0",
+                    "connect": {
+                      "enabled": true
+                    },
+                    "advertise_addr": "$PRIVATE_IP",
+                    "advertise_addr_wan": "$PUBLIC_IP",
+                    "data_dir": "/tmp/consul",
+                    "disable_remote_exec": true,
+                    "disable_update_check": true,
+                    "leave_on_terminate": true,
+                    "bootstrap_expect": 3,
+                    "retry_join": ["provider=aws tag_key=Name tag_value=consul-server"],
+                    "server": true,
+                    "ui": true
+                  }
+                  EOF
+
+                  consul agent -config-dir="/etc/consul.d" &
+                  AZ=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
+
+                  export AZ=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
+                  if [ $AZ = "us-west-2a" ]; then
+                    echo "We are in ${AZ}. I will back things up."
+                    while true; do
+                      sleep 43200
+                      echo "Starting backup."
+                      export BOSTON=$(date +%Y%m%d%H%M)
+                      consul snapshot save $BOSTON.snap
+                      aws s3 cp $BOSTON.snap s3://kloudcover/consul/$BOSTON.snap
+                      echo "Backed up consul."
+                    done
+                  fi
+ # instance types
+  SpotFleetConsul3:
+    DependsOn: SpotFleetConsul2
+    Type: AWS::EC2::SpotFleet
+    Properties:
+      SpotFleetRequestConfigData:
+        AllocationStrategy: diversified
+        TargetCapacity: 1
+        IamFleetRole:
+          Fn::GetAtt:
+          - SpotFleetRole
+          - Arn
+        LaunchSpecifications:
+        - BlockDeviceMappings:
+          - DeviceName: "/dev/xvdcz"
+            Ebs:
+              DeleteOnTermination: 'true'
+              VolumeSize: !Ref VolumeSize
+              VolumeType: gp2
+          IamInstanceProfile:
+            Arn: !GetAtt InstanceProfile.Arn
+          ImageId: !Ref ImageId
+          InstanceType: t2.micro
+          KeyName: boston
+          WeightedCapacity: 1
+          Monitoring:
+            Enabled: 'true'
+          SecurityGroups:
+          - GroupId:
+              Ref: ConsulBadgeSG
+          - GroupId:
+              Ref: ConsulPort22SG
+
+          SpotPrice: '0.015'
+          SubnetId: subnet-9b2938c2
+          TagSpecifications:
+            - ResourceType: instance
+              Tags:
+              - Key: Name
+                Value: consul-server
+          UserData:
+            Fn::Base64:
+              Fn::Sub:
+                  |
+                  #!/bin/bash -xe
+                  set -e
+
+                  # mkdir -p /efs
+                  # mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 fs-df827476.efs.us-west-2.amazonaws.com:/ /efs
+
+                  echo "Grabbing IPs..."
+                  PRIVATE_IP=$(curl http://169.254.169.254/latest/meta-data/local-ipv4)
+                  PUBLIC_IP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)
+
+                  # Setup Consul
+                  mkdir -p /etc/consul.d
+                  mkdir -p /tmp/consul
+
+                  tee /etc/consul.d/config.json > /dev/null <<EOF
+                  {
+                    "bind_addr": "$PRIVATE_IP",
+                    "client_addr": "0.0.0.0",
+                    "connect": {
+                      "enabled": true
+                    },
+                    "advertise_addr": "$PRIVATE_IP",
+                    "advertise_addr_wan": "$PUBLIC_IP",
+                    "data_dir": "/tmp/consul",
+                    "disable_remote_exec": true,
+                    "disable_update_check": true,
+                    "leave_on_terminate": true,
+                    "bootstrap_expect": 3,
+                    "retry_join": ["provider=aws tag_key=Name tag_value=consul-server"],
+                    "server": true,
+                    "ui": true
+                  }
+                  EOF
+
+                  consul agent -config-dir="/etc/consul.d" &
+                  AZ=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
+
+                  export AZ=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
+                  if [ $AZ = "us-west-2a" ]; then
+                    echo "We are in ${AZ}. I will back things up."
+                    while true; do
+                      sleep 43200
+                      echo "Starting backup."
+                      export BOSTON=$(date +%Y%m%d%H%M)
+                      consul snapshot save $BOSTON.snap
+                      aws s3 cp $BOSTON.snap s3://kloudcover/consul/$BOSTON.snap
+                      echo "Backed up consul."
+                    done
+                  fi
+        - BlockDeviceMappings:
+          - DeviceName: "/dev/xvdcz"
+            Ebs:
+              DeleteOnTermination: 'true'
+              VolumeSize: !Ref VolumeSize
+              VolumeType: gp2
+          IamInstanceProfile:
+            Arn: !GetAtt InstanceProfile.Arn
+          ImageId: !Ref ImageId
+          InstanceType: m3.medium
+          KeyName: boston
+          WeightedCapacity: 1
+          Monitoring:
+            Enabled: 'true'
+          SecurityGroups:
+          - GroupId:
+              Ref: ConsulBadgeSG
+          - GroupId:
+              Ref: ConsulPort22SG
+
+          SpotPrice: '0.015'
+          SubnetId: subnet-9b2938c2
+          TagSpecifications:
+            - ResourceType: instance
+              Tags:
+              - Key: Name
+                Value: consul-server
+          UserData:
+            Fn::Base64:
+              Fn::Sub:
+                  |
+                  #!/bin/bash -xe
+                  set -e
+
+                  # mkdir -p /efs
+                  # mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 fs-df827476.efs.us-west-2.amazonaws.com:/ /efs
+
+                  echo "Grabbing IPs..."
+                  PRIVATE_IP=$(curl http://169.254.169.254/latest/meta-data/local-ipv4)
+                  PUBLIC_IP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)
+
+                  # Setup Consul
+                  mkdir -p /etc/consul.d
+                  mkdir -p /tmp/consul
+
+                  tee /etc/consul.d/config.json > /dev/null <<EOF
+                  {
+                    "bind_addr": "$PRIVATE_IP",
+                    "client_addr": "0.0.0.0",
+                    "connect": {
+                      "enabled": true
+                    },
+                    "advertise_addr": "$PRIVATE_IP",
+                    "advertise_addr_wan": "$PUBLIC_IP",
+                    "data_dir": "/tmp/consul",
+                    "disable_remote_exec": true,
+                    "disable_update_check": true,
+                    "leave_on_terminate": true,
+                    "bootstrap_expect": 3,
+                    "retry_join": ["provider=aws tag_key=Name tag_value=consul-server"],
+                    "server": true,
+                    "ui": true
+                  }
+                  EOF
+
+                  consul agent -config-dir="/etc/consul.d" &
+                  AZ=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
+
+                  export AZ=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
+                  if [ $AZ = "us-west-2a" ]; then
+                    echo "We are in ${AZ}. I will back things up."
+                    while true; do
+                      sleep 43200
+                      echo "Starting backup."
+                      export BOSTON=$(date +%Y%m%d%H%M)
+                      consul snapshot save $BOSTON.snap
+                      aws s3 cp $BOSTON.snap s3://kloudcover/consul/$BOSTON.snap
+                      echo "Backed up consul."
+                    done
+                  fi
+        - BlockDeviceMappings:
+          - DeviceName: "/dev/xvdcz"
+            Ebs:
+              DeleteOnTermination: 'true'
+              VolumeSize: !Ref VolumeSize
+              VolumeType: gp2
+          IamInstanceProfile:
+            Arn: !GetAtt InstanceProfile.Arn
+          ImageId: !Ref ImageId
+          InstanceType: t2.small
+          KeyName: boston
+          WeightedCapacity: 1
+          Monitoring:
+            Enabled: 'true'
+          SecurityGroups:
+          - GroupId:
+              Ref: ConsulBadgeSG
+          - GroupId:
+              Ref: ConsulPort22SG
+
+          SpotPrice: '0.015'
+          SubnetId: subnet-9b2938c2
+          TagSpecifications:
+            - ResourceType: instance
+              Tags:
+              - Key: Name
+                Value: consul-server
+          UserData:
+            Fn::Base64:
+              Fn::Sub:
+                  |
+                  #!/bin/bash -xe
+                  set -e
+
+                  # mkdir -p /efs
+                  # mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 fs-df827476.efs.us-west-2.amazonaws.com:/ /efs
+
+                  echo "Grabbing IPs..."
+                  PRIVATE_IP=$(curl http://169.254.169.254/latest/meta-data/local-ipv4)
+                  PUBLIC_IP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)
+
+                  # Setup Consul
+                  mkdir -p /etc/consul.d
+                  mkdir -p /tmp/consul
+
+                  tee /etc/consul.d/config.json > /dev/null <<EOF
+                  {
+                    "bind_addr": "$PRIVATE_IP",
+                    "client_addr": "0.0.0.0",
+                    "connect": {
+                      "enabled": true
+                    },
+                    "advertise_addr": "$PRIVATE_IP",
+                    "advertise_addr_wan": "$PUBLIC_IP",
+                    "data_dir": "/tmp/consul",
+                    "disable_remote_exec": true,
+                    "disable_update_check": true,
+                    "leave_on_terminate": true,
+                    "bootstrap_expect": 3,
+                    "retry_join": ["provider=aws tag_key=Name tag_value=consul-server"],
+                    "server": true,
+                    "ui": true
+                  }
+                  EOF
+
+                  consul agent -config-dir="/etc/consul.d" &
+                  AZ=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
+
+                  export AZ=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
+                  if [ $AZ = "us-west-2a" ]; then
+                    echo "We are in ${AZ}. I will back things up."
+                    while true; do
+                      sleep 43200
+                      echo "Starting backup."
+                      export BOSTON=$(date +%Y%m%d%H%M)
+                      consul snapshot save $BOSTON.snap
+                      aws s3 cp $BOSTON.snap s3://kloudcover/consul/$BOSTON.snap
+                      echo "Backed up consul."
+                    done
+                  fi
+ # instance types
+ # for spots

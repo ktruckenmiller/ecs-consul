@@ -1,0 +1,9 @@
+
+while true; do
+  echo "Starting backup."
+  export BOSTON=$(date +%Y%m%d%H%M)
+  consul snapshot save $BOSTON.snap
+  aws s3 cp $BOSTON.snap s3://kloudcover/consul/$BOSTON.snap
+  echo "Backed up consul."
+  sleep 43200
+done

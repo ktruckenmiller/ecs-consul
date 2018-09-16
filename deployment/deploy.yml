@@ -11,13 +11,21 @@
     efs_subnet:
       - subnet-bc3193d8
       - subnet-ed43849b
-
+    spots:
+      - subnet: subnet-bc3193d8
+        az: us-west-2a
+      - subnet: subnet-ed43849b
+        az: us-west-2b
+      - subnet: subnet-9b2938c2
+        az: us-west-2c
+    instance_types:
+      - t2.micro
+      - m3.medium
+      - t2.small
   tasks:
     - shell: cat ../packer/ami.txt
       register: ami
       ignore_errors: true
-
-
 
     - shell: dig +short vpn.kloudcover.com
       register: home_ip
@@ -25,6 +33,11 @@
     - set_fact:
         ami_id: "{{ami.stdout}}"
       when: '"ami" in ami.stdout'
+
+    - name: template out server configs
+      template:
+        src: server-cf.j2.yml
+        dest: "server-cf.yml"
 
     - name: cloudformation deploy
       cloudformation:
