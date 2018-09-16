@@ -163,42 +163,48 @@ Resources:
                 Value: consul-server
           UserData:
             Fn::Base64:
-              Fn::Sub: |
-                #!/bin/bash -xe
-                set -e
+              Fn::Sub:
+                - |
+                  #!/bin/bash -xe
+                  set -e
 
-                mkdir -p /efs
-                mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 fs-df827476.efs.us-west-2.amazonaws.com:/ /efs
+                  # mkdir -p /efs
+                  # mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 fs-df827476.efs.us-west-2.amazonaws.com:/ /efs
 
-                echo "Grabbing IPs..."
-                PRIVATE_IP=$(curl http://169.254.169.254/latest/meta-data/local-ipv4)
-                PUBLIC_IP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)
 
-                # Setup Consul
-                mkdir -p /etc/consul.d
-                mkdir -p /mnt/consul
-                tee /etc/consul.d/config.json > /dev/null <<EOF
-                {
-                  "bind_addr": "$PRIVATE_IP",
-                  "client_addr": "0.0.0.0",
-                  "connect": {
-                    "enabled": true
-                  },
-                  "advertise_addr": "$PRIVATE_IP",
-                  "advertise_addr_wan": "$PUBLIC_IP",
-                  "data_dir": "/mnt/consul",
-                  "disable_remote_exec": true,
-                  "disable_update_check": true,
-                  "leave_on_terminate": true,
-                  "bootstrap_expect": 3,
-                  "retry_join": ["provider=aws tag_key=Name tag_value=consul-server"],
-                  "server": true,
-                  "ui": true
-                }
-                EOF
 
-                consul agent -config-dir="/etc/consul.d"
+                  echo "Grabbing IPs..."
+                  PRIVATE_IP=$(curl http://169.254.169.254/latest/meta-data/local-ipv4)
+                  PUBLIC_IP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)
 
+                  # Setup Consul
+                  mkdir -p /etc/consul.d
+                  mkdir -p /mnt/consul
+                  mkdir -p /tmp/consul
+                  s3fs kloudcover:/consul /mnt/consul -o iam_role="${InstanceRoleThing}"
+                  tee /etc/consul.d/config.json > /dev/null <<EOF
+                  {
+                    "bind_addr": "$PRIVATE_IP",
+                    "client_addr": "0.0.0.0",
+                    "connect": {
+                      "enabled": true
+                    },
+                    "advertise_addr": "$PRIVATE_IP",
+                    "advertise_addr_wan": "$PUBLIC_IP",
+                    "data_dir": "/tmp/consul",
+                    "disable_remote_exec": true,
+                    "disable_update_check": true,
+                    "leave_on_terminate": true,
+                    "bootstrap_expect": 3,
+                    "retry_join": ["provider=aws tag_key=Name tag_value=consul-server"],
+                    "server": true,
+                    "ui": true
+                  }
+                  EOF
+
+                  consul agent -config-dir="/etc/consul.d"
+
+                - { InstanceRoleThing: !GetAtt InstanceRole.Arn }
         # - BlockDeviceMappings:
         #
         #   - DeviceName: "/dev/xvdcz"
