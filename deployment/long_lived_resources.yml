@@ -1,0 +1,133 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  VpcId:
+    Type: String
+  HomeIp:
+    Type: String
+Outputs:
+  SpotFleetRole:
+    Description: Generic spot fleet role
+    Value: !GetAtt SpotFleetRole.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}:SpotFleetRoleArn
+  InstanceProfile:
+    Value: !GetAtt InstanceProfile.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}:InstanceProfile
+  ConsulBadgeSG:
+    Value: !Ref ConsulBadgeSG
+    Export:
+      Name: !Sub ${AWS::StackName}:ConsulBadgeSG
+  ConsulPort22SG:
+    Value: !Ref ConsulPort22SG
+    Export:
+      Name: !Sub ${AWS::StackName}:ConsulPort22SG
+
+Resources:
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service: ec2.amazonaws.com
+      Policies:
+      - PolicyName: consul-instance
+        PolicyDocument:
+          Statement:
+          - Action:
+            - s3:*
+            Effect: Allow
+            Resource:
+              - !Sub arn:aws:s3:::kloudcover/consul/*
+          - Action:
+            - s3:List*
+            Effect: Allow
+            Resource:
+              - !Sub arn:aws:s3:::kloudcover
+          - Action:
+            - ec2:DescribeInstances
+            Effect: Allow
+            Resource:
+              - '*'
+          - Action:
+            - ssm:Get*
+            - ssm:Put*
+            - ssm:Delete*
+            Effect: Allow
+            Resource:
+            - Fn::Sub: arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/consul/*
+
+  ConsulBadgeSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: SG for ecs instances to connect to the cluster
+      SecurityGroupIngress:
+      - FromPort: 0
+        IpProtocol: -1
+        SourceSecurityGroupId: sg-07c2597a
+        ToPort: 64500
+      - FromPort: 0
+        IpProtocol: -1
+        ToPort: 64500
+        CidrIp: !Sub ${HomeIp}/32
+
+  IngressBadge:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: ConsulBadgeSG
+    Properties:
+      FromPort: 0
+      IpProtocol: -1
+      ToPort: 64500
+      SourceSecurityGroupId: !GetAtt ConsulBadgeSG.GroupId
+      GroupId: !GetAtt ConsulBadgeSG.GroupId
+
+
+  ConsulPort22SG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: SSH for me
+      SecurityGroupIngress:
+      - CidrIp: 0.0.0.0/0
+        FromPort: 22
+        IpProtocol: tcp
+        ToPort: 22
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref InstanceRole
+
+  SpotFleetRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service: spotfleet.amazonaws.com
+      Policies:
+      - PolicyDocument:
+          Statement:
+          - Action:
+            - ec2:Describe*
+            - ec2:CancelSpotFleetRequests
+            - ec2:CancelSpotInstanceRequests
+            - ec2:ModifySpotFleetRequest
+            - ec2:RequestSpotFleet
+            - ec2:RequestSpotInstances
+            - ec2:TerminateInstances
+            - ec2:CreateTags
+            - iam:PassRole
+            - iam:ListRoles
+            - iam:ListInstanceProfiles
+            Effect: Allow
+            Resource: "*"
+        PolicyName: ec2-spot-fleet

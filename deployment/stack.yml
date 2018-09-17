@@ -1,0 +1,24 @@
+---
+- name: template out server configs
+  template:
+    src: server-cf.j2.yml
+    dest: "server-cf-{{spot.az}}.yml"
+
+- name: get old instance
+  shell: aws ec2 describe-instances --filters "Name=availability-zone,Values={{spot.az}}" "Name=tag:Name, Values=consul-server" "Name=instance-state-name,Values=running" --query "Reservations[0].Instances[0].PublicIpAddress" --output text
+  register: old_instance
+
+- name: tell old one to leave
+  shell: "curl -X PUT {{old_instance.stdout}}:8500/v1/agent/leave"
+  ignore_errors: True
+
+
+- name: cloudformation deploy
+  cloudformation:
+    stack_name: consul-server-{{spot.az}}
+    template: server-cf-{{spot.az}}.yml
+    region: "{{region}}"
+    template_parameters:
+      ImageId: "{{ ami_id | default(image_id)}}"
+      HomeIp: "{{home_ip.stdout}}"
+      Subnet: "{{spot.subnet}}"
